@@ -31,6 +31,8 @@ wss.on('connection', function connection(ws){
             deal_with_connect(ws, d);
         else if(d.type === 'close')
             deal_with_close(ws, d);
+        else if(d.type === 'delay')
+            deal_with_delay(ws, d);
     });
 });
 
@@ -88,6 +90,7 @@ function deal_with_jump(ws, d){
     //uuid_ws[d.uuid] = ws;
     let res = {};
     res['type'] = 'jump';
+    res['posy'] = d.posy;
     try{
         uuid_ws[opponent[d.uuid]].send(JSON.stringify(res));
     }catch(e){
@@ -140,6 +143,10 @@ function deal_with_close(ws, d){
         not_matched.splice(i, 1);
     console.log('not_matched_: ' + not_matched);
     ws.terminate();
+}
+
+function deal_with_delay(ws, d){
+    ws.send(JSON.stringify({type: 'delay', timestamp: d.timestamp}));
 }
 
 server.listen(443);
