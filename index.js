@@ -14,6 +14,7 @@ let uuid_ws = {};
 let not_matched = [];
 let opponent = {};
 let dead = {};
+let gameOn = [];
 
 wss.on('connection', function connection(ws){
     ws.on('message', function incoming(message){
@@ -73,6 +74,8 @@ function deal_with_request(ws, d){
             uuid_ws[uuid].opponent = ws.uuid;
             opponent[uuid] = ws.uuid;
             opponent[ws.uuid] = uuid;
+            gameOn[uuid] = true;
+            gameOn[ws.uuid] = true;
             break;
         }catch(e){
             console.log(e);
@@ -88,6 +91,9 @@ function deal_with_request(ws, d){
 
 function deal_with_jump(ws, d){
     //uuid_ws[d.uuid] = ws;
+    if(!(d.uuid in gameOn))
+        return;
+    gameOn[d.uuid] = true;
     let res = {};
     res['type'] = 'jump';
     res['posy'] = d.posy;
@@ -104,6 +110,9 @@ function deal_with_connect(ws, d){
 }
 
 function deal_with_score(ws, d){
+    if(!(d.uuid in gameOn))
+        return;
+    gameOn[d.uuid] = true;
     let res = {};
     res['type'] = 'score';
     res['score'] = d.score;
@@ -115,6 +124,9 @@ function deal_with_score(ws, d){
 }
 
 function deal_with_die(ws, d){
+    if(!(d.uuid in gameOn))
+        return ;
+    delete gameOn[d.uuid];
     dead[d.uuid] = true;
     console.log(d.uuid);
     let res = {};
@@ -174,3 +186,28 @@ const interval = setInterval(function ping() {
     });
 }, 20000);
 
+const offline = setInterval(function (){
+    for(let uuid in gameOn){
+        if(!gameOn[uuid]){
+            delete gameOn[uuid];
+            dead[uuid] = true;
+            let res = {};
+            res['type'] = 'die';
+            try{
+                uuid_ws[opponent[uuid]].send(JSON.stringify(res));
+            }catch(e){
+                console.log(e);
+            }
+            if(dead[opponent[uuid]]){
+                res['type'] = 'finish';
+                try{
+                    uuid_ws[opponent[uuid]].send(JSON.stringify(res));
+                }catch(e){
+                    console.log(e);
+                }
+            }
+        }
+        else
+            gameOn[uuid] = false;          
+    }
+}, 4000)
