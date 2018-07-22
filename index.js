@@ -17,6 +17,8 @@ let dead = {};
 let gameOn = [];
 
 wss.on('connection', function connection(ws){
+    ws.isAlive = true;
+    ws.on('pong', heartbeat);
     ws.on('message', function incoming(message){
         let d = JSON.parse(message);
         console.log(d);
@@ -38,10 +40,10 @@ wss.on('connection', function connection(ws){
 });
 
 function deal_with_request(ws, d){
+    delete uuid_ws[d.uuid];
     ws.uuid = uuid.v4();
     ws.nickName = d.nickName;
     ws.avatarUrl = d.avatarUrl;
-    ws.isAlive = true;
     ws.opponent = 'null';
     uuid_ws[ws.uuid] = ws;
     console.log(not_matched.length);
@@ -105,6 +107,9 @@ function deal_with_jump(ws, d){
 }
 
 function deal_with_connect(ws, d){
+    if(d.uuid === '')
+        return;
+    ws.uuid = d.uuid;
     uuid_ws[d.uuid] = ws;
     dead[d.uuid] = false;
 }
@@ -168,23 +173,33 @@ function noop() {}
 function heartbeat() {
     this.isAlive = true;
 }
- 
+/* 
 wss.on('connection', function connection(ws) {
     ws.isAlive = true;
     ws.on('pong', heartbeat);
 });
-
+*/
 const interval = setInterval(function ping() {
+    for(let uuid in uuid_ws){
+        if(uuid_ws[uuid].isAlive === false){
+            console.log(uuid + ' terminated.');
+            delete uuid_ws[uuid];
+        }else{
+            console.log('testing ' + uuid);
+            uuid_ws[uuid].isAlive = false;
+            uuid_ws[uuid].ping(noop);
+        }
+    }/*
     wss.clients.forEach(function each(ws) {
        if (ws.isAlive === false){
-           console.log(ws.uuid + ' ' + ws.nickName + ' terminated.');
+           console.log(ws.uuid + ' terminated.');
            return ws.terminate();
        }
-       console.log('testing ' + ws.nickName);
+       console.log('testing ' + ws.uuid);
        ws.isAlive = false;
        ws.ping(noop);
-    });
-}, 20000);
+    });*/
+}, 1000);
 
 const offline = setInterval(function (){
     for(let uuid in gameOn){
