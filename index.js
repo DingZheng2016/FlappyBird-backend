@@ -36,6 +36,10 @@ wss.on('connection', function connection(ws){
             deal_with_close(ws, d);
         else if(d.type === 'delay')
             deal_with_delay(ws, d);
+        else if(d.type === 'startbubble')
+            deal_with_startbubble(ws, d);
+        else if(d.type === 'endbubble')
+            deal_with_endbubble(ws, d);
     });
 });
 
@@ -152,6 +156,32 @@ function deal_with_die(ws, d){
     }
 }
 
+function deal_with_startbubble(ws, d){
+    if(!(d.uuid in gameOn))
+        return ;
+    gameOn[d.uuid] = true;
+    let res = {};
+    res['type'] = 'startbubble';
+    try{
+        uuid_ws[opponent[d.uuid]].send(JSON.stringify(res));
+    }catch(e){
+        console.log(e);
+    }
+}
+
+function deal_with_endbubble(ws, d){
+    if(!(d.uuid in gameOn))
+        return ;
+    gameOn[d.uuid] = true;
+    let res = {};
+    res['type'] = 'endbubble';
+    try{
+        uuid_ws[opponent[d.uuid]].send(JSON.stringify(res));
+    }catch(e){
+        console.log(e);
+    }
+}
+
 function deal_with_close(ws, d){
     delete uuid_ws[ws.uuid];
     let i = not_matched.indexOf(ws.uuid);
@@ -199,7 +229,7 @@ const interval = setInterval(function ping() {
        ws.isAlive = false;
        ws.ping(noop);
     });*/
-}, 1000);
+}, 3000);
 
 const offline = setInterval(function (){
     for(let uuid in gameOn){
